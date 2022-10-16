@@ -2,6 +2,6 @@
   name: cpp_comment_format
   description: Format C++ comments
   minimum_pre_commit_version: 2.1.0
-  entry: cpp_comment_format
+  entry: cpp_comment_format --in-place
   language: python
   types: [c++]
