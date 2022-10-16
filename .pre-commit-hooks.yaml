@@ -1,0 +1,7 @@
+- id: cpp_comment_format
+  name: cpp_comment_format
+  description: Format C++ comments
+  minimum_pre_commit_version: 2.1.0
+  entry: cpp_comment_format
+  language: python
+  types: [cpp, h, hpp]

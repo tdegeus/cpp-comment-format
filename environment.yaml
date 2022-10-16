@@ -1,0 +1,9 @@
+channels:
+- conda-forge
+dependencies:
+- furo
+- pre-commit
+- python
+- setuptools_scm
+- sphinx
+- sphinx-argparse
