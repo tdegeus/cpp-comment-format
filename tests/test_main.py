@@ -33,7 +33,7 @@ class Test(unittest.TestCase):
         self.assertEqual(ret, expected)
         self.assertEqual(cpp_comment_format.format(ret, style="javadoc", doxygen="@"), expected)
 
-    def test_javadoc_doxygen(self):
+    def test_javadoc_doxygen_2(self):
         """ """
 
         text = r"""
@@ -59,6 +59,7 @@ class Test(unittest.TestCase):
         ret = cpp_comment_format.format(text, style="javadoc", doxygen="\\")
         self.assertEqual(ret, expected)
         self.assertEqual(cpp_comment_format.format(ret, style="javadoc", doxygen="\\"), expected)
+
 
 if __name__ == "__main__":
 
