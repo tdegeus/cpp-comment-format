@@ -63,38 +63,72 @@ def find_matching(
     return ret
 
 
-def format_javadoc(text: str) -> str:
+def _format_javadoc_doxygen(text: str, doxygen_prefix: str) -> str:
+    """
+    Format docstrings according to javadoc/doxygen conventions::
+
+        /**
+         * This is a docstring.
+         *
+         * @param a This is a parameter.
+         */
+    """
 
     brackets = find_matching(text, "/**", "*/")
-    starting = sorted(list(brackets.keys()))
+    opening_chars = sorted(list(brackets.keys()))
     newline = [i for i, c in enumerate(text) if c == "\n"]
     ret = text.split("\n")
 
+    repkeys = ["\\", "@"]
+    repkeys.remove(doxygen_prefix)
+    repkeys = [re.escape(i) for i in repkeys]
+    doxygen_prefix = re.escape(doxygen_prefix)
+
     inewline = 0
 
-    for i in starting:
-        while i > newline[inewline]:
+    for opening_char in opening_chars:
+        while opening_char > newline[inewline]:
             inewline += 1
-        s = inewline
-        while brackets[i] > newline[inewline]:
+        start_line = inewline
+        while brackets[opening_char] > newline[inewline]:
             inewline += 1
         inewline += 1
-        e = inewline
+        end_line = inewline
 
-        block = ret[s:e]
+        block = ret[start_line:end_line]
         indent = len(block[0].split("/**")[0])
-        for j in range(1, len(block) - 1):
-            if re.match(r"^\s*$", block[j]):
-                block[j] = " " * indent + " *"
-            elif not re.match(r"^\s*\*", block[j]) or re.match(r"^\s*\*\*\w*.*", block[j]):
-                _, ind, c, _ = re.split(r"^(\s*)(.*)$", block[j])
-                block[j] = " " * indent + " * " + " " * (len(ind) - indent) + c
-            for key in ["param", "tparam", "return", "warning", "brief", "throws", "file"]:
-                block[j] = re.sub(rf"^(\s*)(\*\s*)(\\{key})(.*)$", rf"\1\2@{key}\4", block[j])
+        for i in range(1, len(block) - 1):
+            if re.match(r"^\s*$", block[i]):
+                block[i] = " " * indent + " *"
+            elif not re.match(r"^\s*\*", block[i]) or re.match(r"^\s*\*\*\w*.*", block[i]):
+                _, ind, cmd, _ = re.split(r"^(\s*)(.*)$", block[i])
+                block[i] = " " * indent + " * " + " " * (len(ind) - indent) + cmd
+            for symbol in repkeys:
+                for key in ["param", "tparam", "return", "warning", "brief", "throws", "file"]:
+                    block[i] = re.sub(
+                        rf"^(\s*)(\*\s*)({symbol}{key})(.*)$",
+                        rf"\1\2{doxygen_prefix}{key}\4",
+                        block[i],
+                    )
         block[-1] = " " * indent + " */"
-        ret[s:e] = block
+        ret[start_line:end_line] = block
 
     return "\n".join(ret)
+
+
+def format(text: str, style: str = "javadoc", doxygen: str = "@") -> str:
+    r"""
+    Change formatting of comment blocks. See `doxygen <https://doxygen.nl/manual/docblocks.html>`_.
+
+    :param style: Select style: ``"javadoc"``.
+    :param doxygen: Format doxygen commands with certain prefix (``"@", "\"``). False to skip.
+    :return: Formatted text.
+    """
+
+    if style == "javadoc" and doxygen:
+        return _format_javadoc_doxygen(text, doxygen_prefix=doxygen)
+
+    raise ValueError(f"Unknown style: '{style}'")
 
 
 def _format_parser():
@@ -116,12 +150,19 @@ def _format_parser():
     """
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument("-i", "--in-place", action="store_true", help="Apply formatting in place.")
+    parser.add_argument("-s", "--style", default="javadoc", help="Select style: 'javadoc'.")
+    parser.add_argument(
+        "-d",
+        "--doxygen",
+        default="@",
+        help="Format doxygen commands with certain prefix ('@', '\\'). False to skip.",
+    )
     parser.add_argument("-v", "--version", action="version", version=version)
     parser.add_argument("file", type=str, nargs="*", help="Input file(s).")
     return parser
 
 
-def format(args: list[str]):
+def cli_format(args: list[str]):
     """
     Command-line tool to print datasets from a file, see ``--help``.
     :param args: Command-line arguments (should be all strings).
@@ -133,7 +174,7 @@ def format(args: list[str]):
     for file in args.file:
         with open(file) as f:
             inp = f.read()
-            ret = format_javadoc(inp)
+            ret = format(inp, style=args.style, doxygen=args.doxygen)
             if args.in_place and inp != ret:
                 with open(file, "w") as f:
                     f.write(ret)
@@ -142,4 +183,4 @@ def format(args: list[str]):
 
 
 def _cli():
-    return format(sys.argv[1:])
+    return cli_format(sys.argv[1:])
