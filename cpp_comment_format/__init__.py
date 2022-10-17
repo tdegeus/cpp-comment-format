@@ -63,6 +63,59 @@ def find_matching(
     return ret
 
 
+def _comment_blocks(text: str, opening: str = "/**", closing: str = "*/") -> dict:
+    """
+    Find comment blocks in text.
+
+    :param text: The string to consider.
+    :param opening: The opening symbol (e.g. "/**").
+    :param closing: The closing symbol (e.g. "*/").
+    :return: Dictionary with ``{line_start: line_end}``
+    """
+
+    brackets = find_matching(text, opening, closing)
+    opening_chars = sorted(list(brackets.keys()))
+    newline = [i for i, c in enumerate(text) if c == "\n"]
+
+    ret = {}
+    inewline = 0
+
+    for opening_char in opening_chars:
+        while opening_char > newline[inewline]:
+            inewline += 1
+        start_line = inewline
+        while brackets[opening_char] > newline[inewline]:
+            inewline += 1
+        inewline += 1
+        end_line = inewline
+        ret[start_line] = end_line
+
+    return ret
+
+
+class _FormatLineDoxygen:
+    def __init__(self, prefix: str):
+
+        replace = ["\\", "@"]
+        replace.remove(prefix)
+        self.replace = [re.escape(i) for i in replace]
+        self.prefix = re.escape(prefix)
+
+    def format_line_javadoc(self, line):
+
+        ret = line
+
+        for symbol in self.replace:
+            for key in ["param", "tparam", "return", "warning", "brief", "throws", "file"]:
+                ret = re.sub(
+                    rf"^(\s*)(\*\s*)({symbol}{key})(.*)$",
+                    rf"\1\2{self.prefix}{key}\4",
+                    ret,
+                )
+
+        return ret
+
+
 def _format_javadoc_doxygen(text: str, doxygen_prefix: str) -> str:
     """
     Format docstrings according to javadoc/doxygen conventions::
@@ -74,43 +127,27 @@ def _format_javadoc_doxygen(text: str, doxygen_prefix: str) -> str:
          */
     """
 
-    brackets = find_matching(text, "/**", "*/")
-    opening_chars = sorted(list(brackets.keys()))
-    newline = [i for i, c in enumerate(text) if c == "\n"]
-    ret = text.split("\n")
+    doxygen = _FormatLineDoxygen(doxygen_prefix)
 
-    repkeys = ["\\", "@"]
-    repkeys.remove(doxygen_prefix)
-    repkeys = [re.escape(i) for i in repkeys]
-    doxygen_prefix = re.escape(doxygen_prefix)
+    comment_blocks = _comment_blocks(text, "/**", "*/")
+    ret = text.splitlines()
 
-    inewline = 0
-
-    for opening_char in opening_chars:
-        while opening_char > newline[inewline]:
-            inewline += 1
-        start_line = inewline
-        while brackets[opening_char] > newline[inewline]:
-            inewline += 1
-        inewline += 1
-        end_line = inewline
+    for start_line, end_line in comment_blocks.items():
 
         block = ret[start_line:end_line]
         indent = len(block[0].split("/**")[0])
+        block[-1] = " " * indent + " */"
+
         for i in range(1, len(block) - 1):
+
             if re.match(r"^\s*$", block[i]):
                 block[i] = " " * indent + " *"
             elif not re.match(r"^\s*\*", block[i]) or re.match(r"^\s*\*\*\w*.*", block[i]):
                 _, ind, cmd, _ = re.split(r"^(\s*)(.*)$", block[i])
                 block[i] = " " * indent + " * " + " " * (len(ind) - indent) + cmd
-            for symbol in repkeys:
-                for key in ["param", "tparam", "return", "warning", "brief", "throws", "file"]:
-                    block[i] = re.sub(
-                        rf"^(\s*)(\*\s*)({symbol}{key})(.*)$",
-                        rf"\1\2{doxygen_prefix}{key}\4",
-                        block[i],
-                    )
-        block[-1] = " " * indent + " */"
+
+            block[i] = doxygen.format_line_javadoc(block[i])
+
         ret[start_line:end_line] = block
 
     return "\n".join(ret)
