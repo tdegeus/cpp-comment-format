@@ -106,7 +106,16 @@ class _FormatLineDoxygen:
         ret = line
 
         for symbol in self.replace:
-            for key in ["param", "tparam", "return", "warning", "brief", "throws", "file"]:
+            for key in [
+                "param",
+                "tparam",
+                "return",
+                "warning",
+                "brief",
+                "throws",
+                "file",
+                "copydoc",
+            ]:
                 ret = re.sub(
                     rf"^(\s*)(\*\s*)({symbol}{key})(.*)$",
                     rf"\1\2{self.prefix}{key}\4",
