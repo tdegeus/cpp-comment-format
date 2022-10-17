@@ -130,7 +130,7 @@ def _format_javadoc_doxygen(text: str, doxygen_prefix: str) -> str:
     doxygen = _FormatLineDoxygen(doxygen_prefix)
 
     comment_blocks = _comment_blocks(text, "/**", "*/")
-    ret = text.splitlines()
+    ret = text.split("\n")
 
     for start_line, end_line in comment_blocks.items():
 
