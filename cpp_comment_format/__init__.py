@@ -104,14 +104,17 @@ class _FormatLineDoxygen:
 
         for symbol in self.replace:
             for key in [
-                "param",
-                "tparam",
-                "return",
-                "warning",
+                "author",
                 "brief",
-                "throws",
-                "file",
                 "copydoc",
+                "copydoc",
+                "copyright",
+                "file",
+                "param",
+                "return",
+                "throws",
+                "tparam",
+                "warning",
             ]:
                 ret = re.sub(
                     rf"^(\s*)(\*\s*)({symbol}{key})(.*)$",
