@@ -40,9 +40,6 @@ def find_matching(
     if len(a) == 0 and len(b) == 0:
         return {}
 
-    if len(a) != len(b):
-        raise OSError(f"Unmatching {opening}...{closing} found")
-
     brackets = sorted(a + b, key=lambda i: abs(i))
 
     ret = {}
@@ -53,7 +50,7 @@ def find_matching(
             stack.append(i)
         else:
             if len(stack) == 0:
-                raise IndexError(f"No closing {closing} at: {i:d}")
+                continue
             j = stack.pop()
             ret[j] = -1 * i
 
