@@ -6,6 +6,19 @@ import cpp_comment_format
 class Test(unittest.TestCase):
     """ """
 
+    def test_Docstrings_basic(self):
+
+        code = """/**
+        * This is the global docstring.
+        */
+
+        /**
+         * My first function.
+         */
+        int foo(int a);"""
+
+        self.assertEqual(code, str(cpp_comment_format.Docstrings(code)))
+
     def test_Docstrings(self):
 
         docstrings = [
