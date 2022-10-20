@@ -140,11 +140,14 @@ def _format_javadoc_doxygen(text: str, doxygen_prefix: str) -> str:
 
     comment_blocks = _comment_blocks(text, "/**", "*/")
     ret = text.split("\n")
+    indents = []
 
     for start_line, end_line in comment_blocks.items():
 
         block = ret[start_line:end_line]
         indent = len(block[0].split("/**")[0])
+        if indent > 0:
+            indents.append(indent)
         block[-1] = " " * indent + " */"
 
         for i in range(1, len(block) - 1):
@@ -158,6 +161,27 @@ def _format_javadoc_doxygen(text: str, doxygen_prefix: str) -> str:
             block[i] = doxygen.format_line_javadoc(block[i])
 
         ret[start_line:end_line] = block
+
+    # fix indentation inside comment blocks
+
+    if len(indents) > 0:
+
+        indent = round(sum(indents) / len(indents))
+
+        if indent == indents[0]:
+
+            for start_line, end_line in comment_blocks.items():
+
+                block = ret[start_line:end_line]
+
+                for i in range(1, len(block) - 1):
+                    if re.match(r"^(\s*)(\*)(\s\s+)(.*)", block[i]):
+                        _, ind, sym, space, rest, _ = re.split(r"^(\s*)(\*)(\s\s+)(.*)", block[i])
+                        ex = (len(ind) + len(sym) + len(space)) % indent
+                        if ex:
+                            block[i] = ind + sym + space + " " * (indent - ex) + rest
+
+                ret[start_line:end_line] = block
 
     return "\n".join(ret)
 

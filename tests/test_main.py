@@ -91,6 +91,37 @@ class Test(unittest.TestCase):
         self.assertEqual(ret, expected)
         self.assertEqual(cpp_comment_format.format(ret, style="javadoc", doxygen="@"), expected)
 
+    def test_indentation(self):
+        """ """
+
+        text = """
+    /**
+     * This is a docstring::
+     *
+     *     int foo(int a);
+     *
+     * @param a This is a parameter.
+     * @return This is a return value.
+     */
+    int foo(int a);
+        """
+
+        expected = """
+    /**
+     * This is a docstring::
+     *
+     *      int foo(int a);
+     *
+     * @param a This is a parameter.
+     * @return This is a return value.
+     */
+    int foo(int a);
+        """
+
+        ret = cpp_comment_format.format(text, style="javadoc", doxygen="@")
+        self.assertEqual(ret, expected)
+        self.assertEqual(cpp_comment_format.format(ret, style="javadoc", doxygen="@"), expected)
+
 
 if __name__ == "__main__":
 
