@@ -140,14 +140,11 @@ def _format_javadoc_doxygen(text: str, doxygen_prefix: str) -> str:
 
     comment_blocks = _comment_blocks(text, "/**", "*/")
     ret = text.split("\n")
-    indents = []
 
     for start_line, end_line in comment_blocks.items():
 
         block = ret[start_line:end_line]
         indent = len(block[0].split("/**")[0])
-        if indent > 0:
-            indents.append(indent)
         block[-1] = " " * indent + " */"
 
         for i in range(1, len(block) - 1):
@@ -162,43 +159,78 @@ def _format_javadoc_doxygen(text: str, doxygen_prefix: str) -> str:
 
         ret[start_line:end_line] = block
 
-    # fix indentation inside comment blocks
+    return "\n".join(ret)
 
-    if len(indents) > 0:
 
-        indent = round(sum(indents) / len(indents))
+def _format_javadoc_internal_indent(text: str, tabsize: int = None) -> str:
+    """
+    Fix indentation of indented code inside javadoc comment blocks, that are formatted::
 
-        if indent == indents[0]:
+        /**
+         * This is a docstring.
+         *
+         *      This is indented code.
+         */
 
-            for start_line, end_line in comment_blocks.items():
+    This function makes sure that the indentation of the indented code matched the global tab size.
 
-                block = ret[start_line:end_line]
+    :param text: Source code.
+    :param tabsize: The global tab size (default: extract automatically).
+    :return: Source code with fixed indentation.
+    """
 
-                for i in range(1, len(block) - 1):
-                    if re.match(r"^(\s*)(\*)(\s\s+)(.*)", block[i]):
-                        _, ind, sym, space, rest, _ = re.split(r"^(\s*)(\*)(\s\s+)(.*)", block[i])
-                        ex = (len(ind) + len(sym) + len(space)) % indent
-                        if ex:
-                            block[i] = ind + sym + space + " " * (indent - ex) + rest
+    comment_blocks = _comment_blocks(text, "/**", "*/")
+    ret = text.split("\n")
 
-                ret[start_line:end_line] = block
+    if tabsize is None:
+        indent = []
+        for start_line in comment_blocks:
+            indent.append(len(ret[start_line].split("/**")[0]))
+        indent = list(filter(lambda i: i != 0, indent))
+        tabsize = round(sum(indent) / len(indent))
+
+    for start_line, end_line in comment_blocks.items():
+
+        block = ret[start_line:end_line]
+
+        for i in range(1, len(block) - 1):
+            if re.match(r"^(\s*)(\*)(\s\s+)(.*)", block[i]):
+                _, ind, sym, space, rest, _ = re.split(r"^(\s*)(\*)(\s\s+)(.*)", block[i])
+                ex = (len(ind) + len(sym) + len(space)) % tabsize
+                if ex:
+                    block[i] = ind + sym + space + " " * (tabsize - ex) + rest
+
+        ret[start_line:end_line] = block
 
     return "\n".join(ret)
 
 
-def format(text: str, style: str = "javadoc", doxygen: str = "@") -> str:
+def format(
+    text: str,
+    style: str = "javadoc",
+    doxygen: str = "@",
+    tabsize: int = None,
+    align_codeblock: bool = False,
+) -> str:
     r"""
     Change formatting of comment blocks. See `doxygen <https://doxygen.nl/manual/docblocks.html>`_.
 
     :param style: Select style: ``"javadoc"``.
     :param doxygen: Format doxygen commands with certain prefix (``"@", "\"``). False to skip.
+    :param tabsize: Specify tabsize.
+    :param align_codeblock: Align code blocks inside the comment blocks.
     :return: Formatted text.
     """
 
     if style == "javadoc" and doxygen:
-        return _format_javadoc_doxygen(text, doxygen_prefix=doxygen)
+        ret = _format_javadoc_doxygen(text, doxygen_prefix=doxygen)
+    else:
+        raise ValueError(f"Unknown style: '{style}'")
 
-    raise ValueError(f"Unknown style: '{style}'")
+    if align_codeblock:
+        ret = _format_javadoc_internal_indent(ret, tabsize=tabsize)
+
+    return ret
 
 
 def _format_parser():
@@ -221,6 +253,13 @@ def _format_parser():
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument("-i", "--in-place", action="store_true", help="Apply formatting in place.")
     parser.add_argument("-s", "--style", default="javadoc", help="Select style: 'javadoc'.")
+    parser.add_argument("-t", "--tabsize", type=int, help="Specify tabsize.")
+    parser.add_argument(
+        "-c",
+        "--code-block",
+        action="store_true",
+        help="Align code-block in comment blocks with tabsize.",
+    )
     parser.add_argument(
         "-d",
         "--doxygen",
@@ -244,7 +283,13 @@ def cli_format(args: list[str]):
     for file in args.file:
         with open(file) as f:
             inp = f.read()
-            ret = format(inp, style=args.style, doxygen=args.doxygen)
+            ret = format(
+                inp,
+                style=args.style,
+                doxygen=args.doxygen,
+                tabsize=args.tabsize,
+                align_codeblock=args.code_block,
+            )
             if args.in_place and inp != ret:
                 with open(file, "w") as f:
                     f.write(ret)

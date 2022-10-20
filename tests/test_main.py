@@ -118,7 +118,7 @@ class Test(unittest.TestCase):
     int foo(int a);
         """
 
-        ret = cpp_comment_format.format(text, style="javadoc", doxygen="@")
+        ret = cpp_comment_format.format(text, style="javadoc", doxygen="@", align_codeblock=True)
         self.assertEqual(ret, expected)
         self.assertEqual(cpp_comment_format.format(ret, style="javadoc", doxygen="@"), expected)
 
