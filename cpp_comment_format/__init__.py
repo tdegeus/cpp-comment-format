@@ -249,8 +249,12 @@ class Docstrings:
         scode = min(code_blocks)
         ecode = code_blocks[scode]
 
-        self.blocks = [text[newline[scode - 1] + 1 : newline[ecode]]]  # noqa: E203
-        self.comment = [False]
+        if min(doc_blocks) == 0:
+            self.blocks = []
+            self.comment = []
+        else:
+            self.blocks = [text[newline[scode - 1] + 1 : newline[ecode]]]  # noqa: E203
+            self.comment = [False]
 
         while True:
 
@@ -260,7 +264,10 @@ class Docstrings:
             scode = edoc
             ecode = code_blocks[scode]
 
-            self.blocks.append(text[newline[sdoc - 1] + 1 : newline[edoc - 1]])  # noqa: E203
+            if sdoc == 0:
+                self.blocks.append(text[: newline[edoc - 1]])  # noqa: E203
+            else:
+                self.blocks.append(text[newline[sdoc - 1] + 1 : newline[edoc - 1]])  # noqa: E203
             self.comment.append(True)
 
             if ecode == -1:
