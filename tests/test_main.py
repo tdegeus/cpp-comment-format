@@ -8,14 +8,35 @@ class Test(unittest.TestCase):
 
     def test_Docstrings_basic(self):
 
-        code = """/**
+        code = """
+        /**
         * This is the global docstring.
         */
 
         /**
          * My first function.
          */
-        int foo(int a);"""
+        int foo(int a);
+        """.lstrip()
+
+        self.assertEqual(code, str(cpp_comment_format.Docstrings(code)))
+
+        code = """
+        /**
+        * This is the global docstring.
+        */
+        #ifndef HEADER_H
+        #define HEADER_H
+
+        #define some macro
+
+        /**
+         * My first function.
+         */
+        int foo(int a);
+
+        #endif
+        """.lstrip()
 
         self.assertEqual(code, str(cpp_comment_format.Docstrings(code)))
 
@@ -61,6 +82,54 @@ class Test(unittest.TestCase):
         self.assertEqual(str(docs).strip(), code.strip())
         self.assertEqual(str(docs), str(cpp_comment_format.Docstrings(str(docs))))
 
+    def test_quotes(self):
+
+        code = """
+        /**
+         * This is a ``docstring``.
+         */
+        """
+
+        formatted = """
+        /**
+         * This is a `docstring`.
+         */
+        """
+
+        self.assertEqual(cpp_comment_format._commentblock_changequotes(code, "``", "`"), formatted)
+
+        code = """
+        /**
+         * This ``is`` a ``docstring``.
+         */
+        """
+
+        formatted = """
+        /**
+         * This `is` a `docstring`.
+         */
+        """
+
+        self.assertEqual(cpp_comment_format._commentblock_changequotes(code, "``", "`"), formatted)
+
+    @unittest.skip("Bug")
+    def test_quotes_bug(self):
+        code = """
+        /**
+         * This is a docstring.
+         * square box with edge-size ``(2 * size + 1) * h``, around ``element``.
+         */
+        """
+
+        formatted = """
+        /**
+         * This is a docstring.
+         * square box with edge-size `(2 * size + 1) * h`, around `element`.
+         */
+        """
+
+        self.assertEqual(cpp_comment_format._commentblock_changequotes(code, "``", "`"), formatted)
+
     def test_javadoc_doxygen(self):
         """ """
 
@@ -93,15 +162,29 @@ class Test(unittest.TestCase):
 
         text = r"""
     /**
+     * Global docstring.
+     */
+    #ifndef HEADER_H
+    #define HEADER_H
+
+    /**
     This is a docstring.
 
     @param a This is a parameter.
     @return This is a return value.
     */
     int foo(int a);
+
+    #endif
         """
 
         expected = r"""
+    /**
+     * Global docstring.
+     */
+    #ifndef HEADER_H
+    #define HEADER_H
+
     /**
      * This is a docstring.
      *
@@ -109,6 +192,8 @@ class Test(unittest.TestCase):
      * \return This is a return value.
      */
     int foo(int a);
+
+    #endif
         """
 
         ret = cpp_comment_format.format(text, style="javadoc", doxygen="\\")

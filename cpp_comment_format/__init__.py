@@ -15,9 +15,9 @@ def find_matching(
     Find matching 'brackets'.
 
     :param text: The string to consider.
-    :param opening: The opening bracket (e.g. "(", "[", "{").
-    :param closing: The closing bracket (e.g. ")", "]", "}").
-    :param ignore_escaped: Ignore escaped bracket (e.g. "\(", "\[", "\{", "\)", "\]", "\}").
+    :param opening: The opening bracket (e.g. ``"("``, ``"["``, ``"{"``).
+    :param closing: The closing bracket (e.g. ``")"``, ``"]"``, ``"}"``).
+    :param ignore_escaped: Ignore escaped bracket (e.g. ``"\("``, ``"\)"``, etc).
     :return: Dictionary with ``{index_opening: index_closing}``
     """
 
@@ -65,7 +65,7 @@ def _comment_blocks(text: str, opening: str = "/**", closing: str = "*/") -> dic
     Find comment blocks in text.
 
     :param text: The string to consider.
-    :param opening: The opening symbol (e.g. "/**").
+    :param opening: The opening symbol (e.g. ``"/**"``).
     :param closing: The closing symbol (e.g. "*/").
     :return: Dictionary with ``{line_start: line_end}``
     """
@@ -227,17 +227,16 @@ class Docstrings:
             docstrings[i] = doc
 
         formatted_code = str(docstrings)
+
+    :param text: The source code.
+    :param opening: The opening symbol of the docstring (e.g. ``"/**"``).
+    :param closing: The closing symbol of the docstring (e.g. ``"/*"``).
     """
 
-    def __init__(self, text: str, start: str = "/**", end: str = "*/"):
-        """
-        :param text: The source code.
-        :param start: The opening symbol of the docstring (e.g. "/**").
-        :param end: The closing symbol of the docstring (e.g. "/*").
-        """
+    def __init__(self, text: str, opening: str = "/**", closing: str = "*/"):
 
         newline = [i.span()[0] for i in re.finditer(r"\n", text)]
-        doc_blocks = _comment_blocks(text, start, end)
+        doc_blocks = _comment_blocks(text, opening, closing)
 
         code_blocks = {}
         last = 0
@@ -278,19 +277,55 @@ class Docstrings:
             self.blocks.append(text[newline[scode - 1] + 1 : newline[ecode]])  # noqa: E203
             self.comment.append(False)
 
+        self.index = {}
+        i = 0
+        for j in range(len(self.blocks)):
+            if self.comment[j]:
+                self.index[i] = j
+                i += 1
+
     def __iter__(self):
         for i in range(len(self.blocks)):
             if self.comment[i]:
                 yield self.blocks[i]
 
     def __setitem__(self, i, value):
-        self.blocks[i * 2 + 1] = value
+        self.blocks[self.index[i]] = value
 
     def __getitem__(self, i):
-        return self.blocks[i * 2 + 1]
+        return self.blocks[self.index[i]]
 
     def __str__(self):
         return "\n".join(self.blocks)
+
+
+def change_quotes(text: str, search: str, replace: str, ignore_escaped: bool = True) -> str:
+    r"""
+    Change quotes used to quote text in all comment blocks. For example::
+
+        "This is ``a`` variable."  ->  "This is `a` variable."
+
+    :param text: Source code.
+    :param search: The quote to search for, e.g. ``'``.
+    :param replace: The quote to replace with, e.g. ``'``.
+    :param ignore_escaped: Ignore escaped quotes (escaped with \\).
+    :return: Source code with changed formatting.
+    """
+
+    search = re.escape(search)
+    replace = re.escape(replace)
+
+    if ignore_escaped:
+        search = r"(?<!\\)" + search
+
+    docstrings = Docstrings(text)
+
+    for i, doc in enumerate(docstrings):
+        docstrings[i] = re.sub(
+            rf"({search})([^{search}]*)({search})", rf"{replace}\2{replace}", doc
+        )
+
+    return str(docstrings)
 
 
 def format(
@@ -343,6 +378,9 @@ def _format_parser():
     parser.add_argument("-s", "--style", default="javadoc", help="Select style: 'javadoc'.")
     parser.add_argument("-t", "--tabsize", type=int, help="Specify tabsize.")
     parser.add_argument(
+        "--change-quote", nargs=2, action="append", default=[], help="Change quote: SEARCH REPLACE."
+    )
+    parser.add_argument(
         "-c",
         "--code-block",
         action="store_true",
@@ -362,6 +400,7 @@ def _format_parser():
 def cli_format(args: list[str]):
     """
     Command-line tool to print datasets from a file, see ``--help``.
+
     :param args: Command-line arguments (should be all strings).
     """
 
@@ -378,10 +417,13 @@ def cli_format(args: list[str]):
                 tabsize=args.tabsize,
                 align_codeblock=args.code_block,
             )
+            if args.change_quote:
+                for search, replace in args.change_quote:
+                    ret = change_quotes(ret, search, replace)
             if args.in_place and inp != ret:
                 with open(file, "w") as f:
                     f.write(ret)
-            else:
+            elif not args.in_place:
                 print(ret)
 
 
