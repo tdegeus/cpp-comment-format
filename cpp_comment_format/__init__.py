@@ -150,13 +150,11 @@ def _format_javadoc_doxygen(text: str, doxygen_prefix: str) -> str:
     """
 
     doxygen = _FormatLineDoxygen(doxygen_prefix)
+    docstrings = Docstrings(text)
 
-    comment_blocks = _comment_blocks(text, "/**", "*/")
-    ret = text.split("\n")
+    for iblock, doc in enumerate(docstrings):
 
-    for start_line, end_line in comment_blocks.items():
-
-        block = ret[start_line:end_line]
+        block = doc.split("\n")
         indent = len(block[0].split("/**")[0])
         block[-1] = " " * indent + " */"
 
@@ -170,9 +168,9 @@ def _format_javadoc_doxygen(text: str, doxygen_prefix: str) -> str:
 
             block[i] = doxygen.format_line_javadoc(block[i])
 
-        ret[start_line:end_line] = block
+        docstrings[iblock] = "\n".join(block)
 
-    return "\n".join(ret)
+    return str(docstrings)
 
 
 def _format_javadoc_internal_indent(text: str, tabsize: int = None) -> str:
@@ -192,19 +190,18 @@ def _format_javadoc_internal_indent(text: str, tabsize: int = None) -> str:
     :return: Source code with fixed indentation.
     """
 
-    comment_blocks = _comment_blocks(text, "/**", "*/")
-    ret = text.split("\n")
+    docstrings = Docstrings(text)
 
     if tabsize is None:
         indent = []
-        for start_line in comment_blocks:
-            indent.append(len(ret[start_line].split("/**")[0]))
+        for doc in docstrings:
+            indent.append(len(doc.split("/**")[0]))
         indent = list(filter(lambda i: i != 0, indent))
         tabsize = round(sum(indent) / len(indent))
 
-    for start_line, end_line in comment_blocks.items():
+    for iblock, doc in enumerate(docstrings):
 
-        block = ret[start_line:end_line]
+        block = doc.split("\n")
 
         for i in range(1, len(block) - 1):
             if re.match(r"^(\s*)(\*)(\s\s+)(.*)", block[i]):
@@ -213,9 +210,9 @@ def _format_javadoc_internal_indent(text: str, tabsize: int = None) -> str:
                 if ex:
                     block[i] = ind + sym + space + " " * (tabsize - ex) + rest
 
-        ret[start_line:end_line] = block
+        docstrings[iblock] = "\n".join(block)
 
-    return "\n".join(ret)
+    return str(docstrings)
 
 
 class Docstrings:
