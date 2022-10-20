@@ -91,7 +91,14 @@ def _comment_blocks(text: str, opening: str = "/**", closing: str = "*/") -> dic
 
 
 class _FormatLineDoxygen:
+    """
+    Support class to format doxygen commands.
+    """
+
     def __init__(self, prefix: str):
+        """
+        :param prefix: The prefix to use (e.g. "@").
+        """
 
         replace = ["\\", "@"]
         replace.remove(prefix)
@@ -99,6 +106,12 @@ class _FormatLineDoxygen:
         self.prefix = re.escape(prefix)
 
     def format_line_javadoc(self, line):
+        """
+        Format a line of comment.
+
+        :param line: Comment line.
+        :return: Formatted input.
+        """
 
         ret = line
 
