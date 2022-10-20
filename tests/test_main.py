@@ -6,6 +6,48 @@ import cpp_comment_format
 class Test(unittest.TestCase):
     """ """
 
+    def test_Docstrings(self):
+
+        docstrings = [
+            """
+            /**
+             * My first docstring.
+             */
+            """,
+            """
+            /**
+             * My second docstring.
+             * @param a This is a parameter.
+             */
+            """,
+            """
+            /**
+             * My third docstring.
+             * @param a This is a parameter.
+             * @return This is a return value.
+             */
+            """,
+        ]
+
+        code = f"""
+        {docstrings[0]}
+        int foo(int a);
+
+        {docstrings[1]}
+        int bar(int a);
+
+        {docstrings[2]}
+        int baz(int a);
+        """
+
+        docs = cpp_comment_format.Docstrings(code)
+
+        for i, doc in enumerate(docs):
+            self.assertEqual(doc.strip(), docstrings[i].strip())
+
+        self.assertEqual(str(docs).strip(), code.strip())
+        self.assertEqual(str(docs), str(cpp_comment_format.Docstrings(str(docs))))
+
     def test_javadoc_doxygen(self):
         """ """
 
