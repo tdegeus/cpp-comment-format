@@ -205,6 +205,77 @@ def _format_javadoc_internal_indent(text: str, tabsize: int = None) -> str:
     return "\n".join(ret)
 
 
+class Docstrings:
+    """
+    Class to format docstrings.
+    From this class, one can loop over all docstrings in a file and format them. E.g.::
+
+        docstrings = Docstrings(code)
+
+        for i, doc in enumerate(docstrings):
+            doc = ...
+            docstrings[i] = doc
+
+        formatted_code = str(docstrings)
+    """
+
+    def __init__(self, text: str, start: str = "/**", end: str = "*/"):
+        """
+        :param text: The source code.
+        :param start: The opening symbol of the docstring (e.g. "/**").
+        :param end: The closing symbol of the docstring (e.g. "/*").
+        """
+
+        newline = [i.span()[0] for i in re.finditer(r"\n", text)]
+        doc_blocks = _comment_blocks(text, start, end)
+
+        code_blocks = {}
+        last = 0
+        for start_line, end_line in doc_blocks.items():
+            code_blocks[last] = start_line - 1
+            last = end_line
+        code_blocks[last] = -1
+
+        scode = min(code_blocks)
+        ecode = code_blocks[scode]
+
+        self.blocks = [text[newline[scode - 1] + 1 : newline[ecode]]]  # noqa: E203
+        self.comment = [False]
+
+        while True:
+
+            sdoc = ecode + 1
+            edoc = doc_blocks[sdoc]
+
+            scode = edoc
+            ecode = code_blocks[scode]
+
+            self.blocks.append(text[newline[sdoc - 1] + 1 : newline[edoc - 1]])  # noqa: E203
+            self.comment.append(True)
+
+            if ecode == -1:
+                self.blocks.append(text[newline[scode - 1] + 1 :])  # noqa: E203
+                self.comment.append(False)
+                break
+
+            self.blocks.append(text[newline[scode - 1] + 1 : newline[ecode]])  # noqa: E203
+            self.comment.append(False)
+
+    def __iter__(self):
+        for i in range(len(self.blocks)):
+            if self.comment[i]:
+                yield self.blocks[i]
+
+    def __setitem__(self, i, value):
+        self.blocks[i * 2 + 1] = value
+
+    def __getitem__(self, i):
+        return self.blocks[i * 2 + 1]
+
+    def __str__(self):
+        return "\n".join(self.blocks)
+
+
 def format(
     text: str,
     style: str = "javadoc",
