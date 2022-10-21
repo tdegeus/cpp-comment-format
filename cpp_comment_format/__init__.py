@@ -13,6 +13,9 @@ def find_matching(
 ) -> dict:
     r"""
     Find matching 'brackets'.
+    Note that dangling closing 'brackets' are ignored.
+    For this module this has the specific advantage that e.g. ``/* ... */`` inside code blocks
+    is ignored if ``/** ... */`` is searched.
 
     :param text: The string to consider.
     :param opening: The opening bracket (e.g. ``"("``, ``"["``, ``"{"``).
@@ -93,12 +96,11 @@ def _comment_blocks(text: str, opening: str = "/**", closing: str = "*/") -> dic
 class _FormatLineDoxygen:
     """
     Support class to format doxygen commands.
+
+    :param prefix: The prefix to use (e.g. "@").
     """
 
     def __init__(self, prefix: str):
-        """
-        :param prefix: The prefix to use (e.g. "@").
-        """
 
         replace = ["\\", "@"]
         replace.remove(prefix)
