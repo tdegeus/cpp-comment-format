@@ -9,6 +9,7 @@ def find_matching(
     text: str,
     opening: str,
     closing: str,
+    escape_input: bool = True,
     ignore_escaped: bool = True,
 ) -> dict:
     r"""
@@ -20,6 +21,7 @@ def find_matching(
     :param text: The string to consider.
     :param opening: The opening bracket (e.g. ``"("``, ``"["``, ``"{"``).
     :param closing: The closing bracket (e.g. ``")"``, ``"]"``, ``"}"``).
+    :param escape_input: If ``True``, escape the input string (e.g. ``"\"`` becomes ``"\\\"``).
     :param ignore_escaped: Ignore escaped bracket (e.g. ``"\("``, ``"\)"``, etc).
     :return: Dictionary with ``{index_opening: index_closing}``
     """
@@ -27,8 +29,12 @@ def find_matching(
     a = []
     b = []
 
-    o = re.escape(opening)
-    c = re.escape(closing)
+    if escape_input:
+        o = re.escape(opening)
+        c = re.escape(closing)
+    else:
+        o = opening
+        c = closing
 
     if ignore_escaped:
         o = r"(?<!\\)" + o
@@ -63,17 +69,18 @@ def find_matching(
     return ret
 
 
-def _comment_blocks(text: str, opening: str = "/**", closing: str = "*/") -> dict:
+def _comment_blocks(text: str, opening: str, closing: str, escape_input: bool) -> dict:
     """
     Find comment blocks in text.
 
     :param text: The string to consider.
     :param opening: The opening symbol (e.g. ``"/**"``).
     :param closing: The closing symbol (e.g. "*/").
+    :param escape_input: If ``True``, escape the input string (e.g. ``"\"`` becomes ``"\\\"``).
     :return: Dictionary with ``{line_start: line_end}``
     """
 
-    brackets = find_matching(text, opening, closing)
+    brackets = find_matching(text, opening, closing, escape_input=escape_input)
     opening_chars = sorted(list(brackets.keys()))
     newline = [i for i, c in enumerate(text) if c == "\n"]
 
@@ -167,6 +174,9 @@ def _format_javadoc_doxygen(text: str, doxygen_prefix: str) -> str:
             elif not re.match(r"^\s*\*", block[i]) or re.match(r"^\s*\*\*\w*.*", block[i]):
                 _, ind, cmd, _ = re.split(r"^(\s*)(.*)$", block[i])
                 block[i] = " " * indent + " * " + " " * (len(ind) - indent) + cmd
+            elif re.match(r"^\s*\*.*", block[i]):
+                _, ind, _, cmd, _ = re.split(r"^(\s*)(\*)(.*)$", block[i])
+                block[i] = " " * indent + " *" + cmd
 
             block[i] = doxygen.format_line_javadoc(block[i])
 
@@ -233,12 +243,24 @@ class Docstrings:
     :param text: The source code.
     :param opening: The opening symbol of the docstring (e.g. ``"/**"``).
     :param closing: The closing symbol of the docstring (e.g. ``"/*"``).
+    :param escape_input: If ``True``, escape the input string (e.g. ``"\"`` becomes ``"\\\"``).
     """
 
-    def __init__(self, text: str, opening: str = "/**", closing: str = "*/"):
+    def __init__(
+        self,
+        text: str,
+        opening: str = "/\\*\\*\\s*\n",
+        closing: str = r"\*/",
+        escape_input: bool = False,
+    ):
 
         newline = [i.span()[0] for i in re.finditer(r"\n", text)]
-        doc_blocks = _comment_blocks(text, opening, closing)
+        doc_blocks = _comment_blocks(text, opening, closing, escape_input=escape_input)
+
+        if len(doc_blocks) == 0:
+            self.blocks = [text]
+            self.comment = [False]
+            return
 
         code_blocks = {}
         last = 0
@@ -253,6 +275,9 @@ class Docstrings:
         if min(doc_blocks) == 0:
             self.blocks = []
             self.comment = []
+        elif min(code_blocks) == 0:
+            self.blocks = [text[: newline[ecode]]]  # noqa: E203
+            self.comment = [False]
         else:
             self.blocks = [text[newline[scode - 1] + 1 : newline[ecode]]]  # noqa: E203
             self.comment = [False]

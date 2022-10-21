@@ -96,7 +96,7 @@ class Test(unittest.TestCase):
          */
         """
 
-        self.assertEqual(cpp_comment_format._commentblock_changequotes(code, "``", "`"), formatted)
+        self.assertEqual(cpp_comment_format.change_quotes(code, "``", "`"), formatted)
 
         code = """
         /**
@@ -110,7 +110,7 @@ class Test(unittest.TestCase):
          */
         """
 
-        self.assertEqual(cpp_comment_format._commentblock_changequotes(code, "``", "`"), formatted)
+        self.assertEqual(cpp_comment_format.change_quotes(code, "``", "`"), formatted)
 
     @unittest.skip("Bug")
     def test_quotes_bug(self):
@@ -128,7 +128,7 @@ class Test(unittest.TestCase):
          */
         """
 
-        self.assertEqual(cpp_comment_format._commentblock_changequotes(code, "``", "`"), formatted)
+        self.assertEqual(cpp_comment_format.change_quotes(code, "``", "`"), formatted)
 
     def test_javadoc_doxygen(self):
         """ """
@@ -199,6 +199,56 @@ class Test(unittest.TestCase):
         ret = cpp_comment_format.format(text, style="javadoc", doxygen="\\")
         self.assertEqual(ret, expected)
         self.assertEqual(cpp_comment_format.format(ret, style="javadoc", doxygen="\\"), expected)
+
+    def test_javadoc_doxygen_3(self):
+        """ """
+
+        text = r"""/**
+* This is a docstring.
+*
+* \param a This is a parameter.
+* \return This is a return value.
+*/
+int foo(int a);
+        """
+
+        expected = """/**
+ * This is a docstring.
+ *
+ * @param a This is a parameter.
+ * @return This is a return value.
+ */
+int foo(int a);
+        """
+
+        ret = cpp_comment_format.format(text, style="javadoc", doxygen="@")
+        self.assertEqual(ret, expected)
+        self.assertEqual(cpp_comment_format.format(ret, style="javadoc", doxygen="@"), expected)
+
+    def test_javadoc_doxygen_4(self):
+        """ """
+
+        text = r"""    /**
+    * This is a docstring.
+    *
+    * \param a This is a parameter.
+    * \return This is a return value.
+    */
+    int foo(int a);
+        """
+
+        expected = """    /**
+     * This is a docstring.
+     *
+     * @param a This is a parameter.
+     * @return This is a return value.
+     */
+    int foo(int a);
+        """
+
+        ret = cpp_comment_format.format(text, style="javadoc", doxygen="@")
+        self.assertEqual(ret, expected)
+        self.assertEqual(cpp_comment_format.format(ret, style="javadoc", doxygen="@"), expected)
 
     def test_mixed_style(self):
         """ """
