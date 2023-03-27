@@ -7,7 +7,6 @@ class Test(unittest.TestCase):
     """ """
 
     def test_Docstrings_basic(self):
-
         code = """
         /**
         * This is the global docstring.
@@ -41,7 +40,6 @@ class Test(unittest.TestCase):
         self.assertEqual(code, str(cpp_comment_format.Docstrings(code)))
 
     def test_Docstrings(self):
-
         docstrings = [
             """
             /**
@@ -83,7 +81,6 @@ class Test(unittest.TestCase):
         self.assertEqual(str(docs), str(cpp_comment_format.Docstrings(str(docs))))
 
     def test_quotes(self):
-
         code = """
         /**
          * This is a ``docstring``.
@@ -314,5 +311,4 @@ int foo(int a);
 
 
 if __name__ == "__main__":
-
     unittest.main(verbosity=2)

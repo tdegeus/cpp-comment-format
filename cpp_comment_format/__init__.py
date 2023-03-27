@@ -108,7 +108,6 @@ class _FormatLineDoxygen:
     """
 
     def __init__(self, prefix: str):
-
         replace = ["\\", "@"]
         replace.remove(prefix)
         self.replace = [re.escape(i) for i in replace]
@@ -162,13 +161,11 @@ def _format_javadoc_doxygen(text: str, doxygen_prefix: str) -> str:
     docstrings = Docstrings(text)
 
     for iblock, doc in enumerate(docstrings):
-
         block = doc.split("\n")
         indent = len(block[0].split("/**")[0])
         block[-1] = " " * indent + " */"
 
         for i in range(1, len(block) - 1):
-
             if re.match(r"^\s*$", block[i]):
                 block[i] = " " * indent + " *"
             elif not re.match(r"^\s*\*", block[i]) or re.match(r"^\s*\*\*\w*.*", block[i]):
@@ -212,7 +209,6 @@ def _format_javadoc_internal_indent(text: str, tabsize: int = None) -> str:
         tabsize = round(sum(indent) / len(indent))
 
     for iblock, doc in enumerate(docstrings):
-
         block = doc.split("\n")
 
         for i in range(1, len(block) - 1):
@@ -253,7 +249,6 @@ class Docstrings:
         closing: str = r"\*/",
         escape_input: bool = False,
     ):
-
         newline = [i.span()[0] for i in re.finditer(r"\n", text)]
         doc_blocks = _comment_blocks(text, opening, closing, escape_input=escape_input)
 
@@ -283,7 +278,6 @@ class Docstrings:
             self.comment = [False]
 
         while True:
-
             sdoc = ecode + 1
             edoc = doc_blocks[sdoc]
 
