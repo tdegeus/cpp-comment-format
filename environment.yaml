@@ -1,6 +1,7 @@
 channels:
 - conda-forge
 dependencies:
+- clang-format
 - furo
 - pre-commit
 - python
