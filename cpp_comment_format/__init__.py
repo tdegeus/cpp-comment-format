@@ -1,6 +1,13 @@
 import argparse
+import os
+import pathlib
 import re
+import subprocess
 import sys
+import tempfile
+import textwrap
+
+import yaml
 
 from ._version import version
 
@@ -127,9 +134,11 @@ class _FormatLineDoxygen:
             for key in [
                 "author",
                 "brief",
+                "code",
                 "copydoc",
                 "copydoc",
                 "copyright",
+                "endcode",
                 "file",
                 "param",
                 "return",
@@ -377,6 +386,99 @@ def format(
     return ret
 
 
+def _search_upwards_for_file(filename: str) -> pathlib.Path:
+    """
+    Search in the current directory and all directories above it for a file of a particular name.
+    From: https://stackoverflow.com/a/68994012/2646505
+
+    :param filename: The filename to look for.
+    :return: The location of the first file found (``None`` if none was found).
+    """
+    d = pathlib.Path.cwd()
+    root = pathlib.Path(d.root)
+
+    while d != root:
+        attempt = d / filename
+        if attempt.exists():
+            return attempt
+        d = d.parent
+
+    return None
+
+
+def clang_format(
+    text: str,
+    executable: str = "clang-format",
+    style: dict = None,
+) -> str:
+    r"""
+    Format code blocks using clang-format.
+
+    :note:
+        The assumption is made that if any code block is formatted::
+            @code{.cpp}
+            ...
+            @endcode
+        (i.e. the ``@code`` and ``@endcode`` are on separate lines).
+
+    :param text: Source code.
+    :param blocks: List of code blocks.
+    :param executable: Path to clang-format executable.
+    :return: Source code with formatted code blocks.
+    """
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tempdir = pathlib.Path(tmpdir)
+        sourcefile = tempdir / "source.cpp"
+
+        docstrings = Docstrings(text)
+
+        if style is not None:
+            with open(tempdir / ".clang-format", "w") as file:
+                yaml.dump(style, file)
+
+        for idoc, doc in enumerate(docstrings):
+            # line number of each character
+            lineno = [0 for _ in range(len(doc))]
+            i = 0
+            line = 0
+            for line, match in enumerate(re.finditer(r"\n", doc)):
+                lineno[i : match.span()[0]] = [line for _ in range(match.span()[0] - i)]
+                i = match.span()[0]
+                lineno[i] = line
+                i += 1
+            lineno[i:] = [line + 1 for _ in range(len(doc) - i)]
+
+            matching = find_matching(
+                doc, r"([\@\\])(code{\.cpp})", r"([\@\\])(endcode)", escape_input=False
+            )
+
+            ret = []
+            doclines = doc.splitlines()
+            prev = 0
+
+            for opening, closing in matching.items():
+                ret += doclines[prev : lineno[opening]]
+                prev = lineno[closing] + 1
+
+                target = doclines[lineno[opening] : lineno[closing] + 1]
+                indent = os.path.commonprefix(target)
+                if indent[-1] != " ":
+                    indent += " "
+                target = [line.lstrip(indent) for line in target]
+                source = target[1:-1]
+                sourcefile.write_text("\n".join(source))
+                subprocess.run([executable, "-i", str(sourcefile)])
+                source = sourcefile.read_text()
+                target = [target[0], source, target[-1]]
+                ret += [textwrap.indent("\n".join(target), indent)]
+
+            ret += doclines[prev:]
+            docstrings[idoc] = "\n".join(ret)
+
+    return str(docstrings)
+
+
 def _format_parser():
     """
     Return parser for :py:func:`format`.
@@ -410,8 +512,20 @@ def _format_parser():
     parser.add_argument(
         "-d",
         "--doxygen",
+        type=str,
         default="@",
         help="Format doxygen commands with certain prefix ('@', '\\'). False to skip.",
+    )
+    parser.add_argument(
+        "--clang-format",
+        action="store_true",
+        help=r"Apply clang-format to blocks between @code{.cpp} and @endcode.",
+    )
+    parser.add_argument(
+        "--clang-format-executable",
+        type=str,
+        default="clang-format",
+        help="Specify clang-format executable.",
     )
     parser.add_argument("-v", "--version", action="version", version=version)
     parser.add_argument("file", type=str, nargs="*", help="Input file(s).")
@@ -441,6 +555,11 @@ def cli_format(args: list[str]):
             if args.change_quote:
                 for search, replace in args.change_quote:
                     ret = change_quotes(ret, search, replace)
+            if args.clang_format:
+                style = _search_upwards_for_file(".clang-format")
+                if style is not None:
+                    style = yaml.load(style.read_text(), Loader=yaml.FullLoader)
+                ret = clang_format(ret, args.clang_format_executable, style)
             if args.in_place and inp != ret:
                 with open(file, "w") as f:
                     f.write(ret)

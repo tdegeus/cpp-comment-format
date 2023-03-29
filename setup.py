@@ -20,7 +20,7 @@ setup(
     url=f"https://github.com/tdegeus/{project_name:s}",
     packages=find_packages(exclude=["tests"]),
     use_scm_version={"write_to": f"{project_name}/_version.py"},
-    setup_requires=["setuptools_scm"],
+    setup_requires=["setuptools_scm", "pyyaml"],
     install_requires=[],
     entry_points={
         "console_scripts": [
