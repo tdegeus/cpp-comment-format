@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
+
+[project]
+authors = [{name = "Tom de Geus", email = "tom@geus.me"}]
+classifiers = ["License :: OSI Approved :: MIT License"]
+dependencies = ["pyyaml"]
+description = "C++ comment formatter"
+dynamic = ["version"]
+name = "cpp_comment_format"
+readme = "README.md"
+requires-python = ">=3.6"
+
+[project.scripts]
+cpp_comment_format = "cpp_comment_format:_cli"
+
+[project.urls]
+Source = "https://github.com/tdegeus/cpp_comment_format"
+
+[tool.setuptools_scm]
+write_to = "cpp_comment_format/_version.py"
