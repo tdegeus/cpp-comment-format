@@ -140,6 +140,7 @@ class _FormatLineDoxygen:
                 "copyright",
                 "endcode",
                 "file",
+                "note",
                 "param",
                 "return",
                 "throws",
