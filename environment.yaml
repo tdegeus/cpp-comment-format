@@ -4,6 +4,7 @@ dependencies:
 - clang-format
 - furo
 - pre-commit
+- pytest
 - python
 - pyyaml
 - setuptools_scm
